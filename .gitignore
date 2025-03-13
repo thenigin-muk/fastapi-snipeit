@@ -1,0 +1,16 @@
+# Ignore environment variables
+.env
+
+# Ignore debug/test output
+*.log
+cleaned_data/*
+__pycache__/
+*.sqlite3
+*.db
+
+# Ignore OS-specific files
+.DS_Store
+Thumbs.db
+
+# Ignore virtual environment
+venv/
