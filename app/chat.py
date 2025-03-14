@@ -63,7 +63,7 @@ async def process_chat(request: Request, carrier_data, snipeit_data, snipeit_cat
     bot_id = body["recipient"]["id"]
     sender_id = body["from"]["id"]
 
-    # Create more comprehensive asset summary including assigned_to field
+    # Create asset summary with all assets, not limited
     asset_summary = "\n".join([
         f"• Name: {a.get('name', 'N/A')}, Tag: {a.get('asset_tag', 'N/A')}, "
         f"Status: {a.get('status', 'N/A')}, Model: {a.get('model', 'N/A')}, "
@@ -71,20 +71,22 @@ async def process_chat(request: Request, carrier_data, snipeit_data, snipeit_cat
         f"Assigned To: {a.get('assigned_to', 'N/A')}, "
         f"Location: {a.get('location', 'N/A')}, "
         f"Serial: {a.get('serial', 'N/A')}"
-        for a in snipeit_data[:20]  # Include more assets for better context
+        for a in snipeit_data  # No limit on number of assets
     ])
     
+    # Include all carrier data
     carrier_summary = "\n".join([
         f"• Device: {c.get('Device Name', 'N/A')}, IMEI: {c.get('IMEI', 'N/A')}, "
         f"SIM: {c.get('SIM', 'N/A')}, Phone Number: {c.get('Phone Number', 'N/A')}, "
         f"Carrier: {c.get('Carrier', 'N/A')}, Cost Center: {c.get('cost_center', 'N/A')}"
-        for c in carrier_data[:20]  # Include more carrier devices
+        for c in carrier_data  # No limit
     ])
     
+    # Include all categories
     categories_summary = "\n".join([
         f"• Category: {c.get('name', 'N/A')}, Type: {c.get('category_type', 'N/A')}, "
         f"Asset Count: {c.get('assets_count', 'N/A')}, Item Count: {c.get('item_count', 'N/A')}"
-        for c in snipeit_categories[:20]  # Include more categories
+        for c in snipeit_categories  # No limit
     ])
 
     # Log information only if DEBUG is True

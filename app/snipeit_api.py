@@ -25,8 +25,8 @@ def get_snipeit_assets(debug=False):
         "Accept": "application/json"
     }
     
-    # Increase the limit to get more assets
-    response = requests.get(f"{SNIPE_IT_API_URL}/hardware?limit=500", headers=headers)
+    # Remove limit or set to a very high value to get all assets
+    response = requests.get(f"{SNIPE_IT_API_URL}/hardware", headers=headers)
     
     if response.status_code != 200:
         raise HTTPException(status_code=500, detail=f"Snipe-IT API error: {response.status_code}")

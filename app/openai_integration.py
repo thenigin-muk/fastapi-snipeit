@@ -54,10 +54,12 @@ def query_openai(snipeit_summary, carrier_summary, categories_summary, user_mess
     User's Question: {user_message}
     """
 
+    # Use a much larger context window for GPT-4 Turbo
     try:
         openai_response = openai_client.chat.completions.create(
             model="gpt-4-turbo",
-            messages=[{"role": "user", "content": prompt}]
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=4000  # Increase max tokens for response
         )
         return openai_response.choices[0].message.content
     except Exception as e:
