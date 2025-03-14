@@ -1,6 +1,6 @@
 # app/azure_auth.py
 import httpx
-from app.config import AZURE_BOT_APP_ID, AZURE_BOT_APP_PASSWORD
+from .config import AZURE_BOT_APP_ID, AZURE_BOT_APP_PASSWORD
 
 async def get_azure_auth_token():
     auth_url = "https://login.microsoftonline.com/botframework.com/oauth2/v2.0/token"

@@ -69,7 +69,10 @@ SNIPE_IT_API_KEY=YOUR_SNIPEIT_API_KEY
 OPENAI_API_KEY=YOUR_OPENAI_API_KEY
 AZURE_BOT_APP_ID=YOUR_AZURE_BOT_APP_ID
 AZURE_BOT_APP_PASSWORD=YOUR_AZURE_BOT_APP_PASSWORD
+DEBUG=True
 ```
+
+5. Run the application: `uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload`
 
 ## 🔎 Current Project Status
 
@@ -121,3 +124,61 @@ Ensure `.gitignore` explicitly excludes sensitive files:
 ## 📞 Contact
 
 Maintained by: Tim Henigin - City of Mukilteo
+
+# FastAPI Snipe-IT Integration
+
+A FastAPI application that integrates with Snipe-IT asset management system, providing a chatbot interface to query asset information.
+
+## Changelog
+
+### March 13, 2023
+
+- Added integration with OpenAI API for natural language processing of asset queries
+- Implemented API endpoints to fetch data from Snipe-IT
+- Added support for carrier data normalization (Verizon, T-Mobile, AT&T)
+- Enhanced logging system for better debugging capabilities
+- Fixed circular import issues between modules
+- Added functionality to query assets by tags, names, and assignments
+- Improved error handling for API requests
+- Configured environment variables for secure API key storage
+- Added temporary file storage for debug data
+
+## Setup
+
+1. Clone this repository
+2. Create a virtual environment: `python -m venv venv`
+3. Activate the virtual environment:
+   - Windows: `venv\Scripts\activate`
+   - Unix/macOS: `source venv/bin/activate`
+4. Install dependencies: `pip install -r requirements.txt`
+5. Create a `.env` file with the following variables:
+   ```
+   SNIPE_IT_API_KEY=your_snipe_it_api_key
+   OPENAI_API_KEY=your_openai_api_key
+   AZURE_BOT_APP_ID=your_azure_bot_app_id
+   AZURE_BOT_APP_PASSWORD=your_azure_bot_app_password
+   DEBUG=True
+   ```
+6. Run the application: `uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload`
+
+## Usage
+
+The application exposes a `/chat` endpoint that accepts POST requests with natural language queries about Snipe-IT assets.
+
+Example:
+```bash
+curl -X POST "http://localhost:8000/chat" \
+     -H "Content-Type: application/json" \
+     -d '{"type":"message","text":"How many laptops do we have?"}'
+```
+
+## Debugging
+
+When `DEBUG=True` in the `.env` file, the application will:
+- Log detailed information to the logs directory
+- Save debug data to the temporary directory
+- Output additional console messages
+
+Log files can be found at:
+- `/logs/debug.log` - When DEBUG is True
+- `/logs/app.log` - Production logs

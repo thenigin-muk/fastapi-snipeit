@@ -2,8 +2,9 @@
 import pandas as pd
 import json
 import os
+import tempfile
 
-DATA_DIR = "cleaned_data"
+DATA_DIR = tempfile.gettempdir()
 os.makedirs(DATA_DIR, exist_ok=True)
 
 carrier_files = {

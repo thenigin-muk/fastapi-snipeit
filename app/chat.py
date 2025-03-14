@@ -1,11 +1,56 @@
 # app/chat.py
 from fastapi import Request, HTTPException
 import httpx
-from app.snipeit_api import get_snipeit_assets
-from app.openai_integration import query_openai
-from app.azure_auth import get_azure_auth_token
+from typing import Tuple
+import logging
+from .openai_integration import query_openai
+from .azure_auth import get_azure_auth_token
+from .config import DEBUG
 
-async def process_chat(request: Request):
+# Set up logging based on DEBUG flag
+if DEBUG:
+    logging.basicConfig(level=logging.INFO, 
+                        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+                        handlers=[logging.FileHandler("/tmp/snipeit_debug.log"), 
+                                logging.StreamHandler()])
+    logger = logging.getLogger(__name__)
+else:
+    logger = logging.getLogger(__name__)
+    logger.setLevel(logging.WARNING)
+
+def process_user_query(user_message: str) -> Tuple[str, int]:
+    # Example implementation: Extract category and limit from the user's query
+    category = None
+    limit = None
+
+    if "smartphone" in user_message.lower():
+        category = "Smartphone"
+    if "first" in user_message.lower() and "assets" in user_message.lower():
+        limit = 5
+
+    return category, limit
+
+def map_fieldsets_to_models(models, fieldsets):
+    fieldset_map = {fieldset["id"]: fieldset["fields"] for fieldset in fieldsets}
+    model_fieldset_map = {model["id"]: fieldset_map.get(model["fieldset_id"], []) for model in models}
+    return model_fieldset_map
+
+def summarize_data(data, model_fieldset_map, category=None, limit=None):
+    if category:
+        data = [item for item in data if item.get('category', {}).get('name') == category]
+    if limit:
+        data = data[:limit]
+    summary = "\n".join([
+        f"ID: {item.get('id', 'N/A')}, Name: {item.get('name', 'N/A')}, Tag: {item.get('asset_tag', 'N/A')}, "
+        f"Model: {item.get('model', {}).get('name', 'N/A')}, Category: {item.get('category', {}).get('name', 'N/A')}, "
+        f"Status: {item.get('status_label', {}).get('name', 'N/A')}, Assigned To: {item.get('assigned_to', {}).get('name', 'N/A')}, "
+        f"Location: {item.get('location', {}).get('name', 'N/A')}, Last Checkout: {item.get('last_checkout', {}).get('formatted', 'N/A')}, "
+        f"Custom Fields: {', '.join([f'{k}: {v.get('value', 'N/A')}' for k, v in item.get('custom_fields', {}).items() if k in model_fieldset_map.get(item.get('model', {}).get('id'), [])])}"
+        for item in data
+    ])
+    return summary
+
+async def process_chat(request: Request, carrier_data, snipeit_data, snipeit_categories, snipeit_fieldsets, snipeit_models):
     body = await request.json()
 
     if body.get("type") != "message":
@@ -18,15 +63,59 @@ async def process_chat(request: Request):
     bot_id = body["recipient"]["id"]
     sender_id = body["from"]["id"]
 
-    # Fetch Snipe-IT assets
-    assets = get_snipeit_assets()
+    # Create more comprehensive asset summary including assigned_to field
     asset_summary = "\n".join([
-        f"• {a['name']} (Tag: {a.get('asset_tag', 'N/A')}), Status: {a.get('status', 'N/A')}"
-        for a in assets[:10]
+        f"• Name: {a.get('name', 'N/A')}, Tag: {a.get('asset_tag', 'N/A')}, "
+        f"Status: {a.get('status', 'N/A')}, Model: {a.get('model', 'N/A')}, "
+        f"Category: {a.get('category', 'N/A')}, "
+        f"Assigned To: {a.get('assigned_to', 'N/A')}, "
+        f"Location: {a.get('location', 'N/A')}, "
+        f"Serial: {a.get('serial', 'N/A')}"
+        for a in snipeit_data[:20]  # Include more assets for better context
+    ])
+    
+    carrier_summary = "\n".join([
+        f"• Device: {c.get('Device Name', 'N/A')}, IMEI: {c.get('IMEI', 'N/A')}, "
+        f"SIM: {c.get('SIM', 'N/A')}, Phone Number: {c.get('Phone Number', 'N/A')}, "
+        f"Carrier: {c.get('Carrier', 'N/A')}, Cost Center: {c.get('cost_center', 'N/A')}"
+        for c in carrier_data[:20]  # Include more carrier devices
+    ])
+    
+    categories_summary = "\n".join([
+        f"• Category: {c.get('name', 'N/A')}, Type: {c.get('category_type', 'N/A')}, "
+        f"Asset Count: {c.get('assets_count', 'N/A')}, Item Count: {c.get('item_count', 'N/A')}"
+        for c in snipeit_categories[:20]  # Include more categories
     ])
 
-    # Query OpenAI
-    bot_response = query_openai(asset_summary, user_message)
+    # Log information only if DEBUG is True
+    if DEBUG:
+        logger.info(f"Total assets in snipeit_data: {len(snipeit_data)}")
+        
+        # Check for specific asset tag
+        asset_427 = next((a for a in snipeit_data if a.get('asset_tag') == '00427'), None)
+        if asset_427:
+            logger.info(f"Found asset 00427: {asset_427}")
+        else:
+            logger.info("Asset tag 00427 not found in the dataset")
+        
+        # Display the first 10 asset tags for debugging
+        first_10_tags = [a.get('asset_tag') for a in snipeit_data[:10]]
+        logger.info(f"First 10 asset tags: {first_10_tags}")
+
+    logger = logging.getLogger(__name__)
+    
+    # Search for asset tag 00427 in the data passed to the function
+    asset_427 = next((asset for asset in snipeit_data if asset.get("asset_tag") == "00427"), None)
+    if asset_427:
+        logger.warning(f"Found asset 00427 in process_chat: {asset_427}")
+    else:
+        logger.warning(f"Asset tag 00427 NOT FOUND in process_chat")
+        # Log the first 5 asset tags to see what's available
+        first_5_tags = [asset.get("asset_tag") for asset in snipeit_data[:5]]
+        logger.warning(f"First 5 asset tags in process_chat: {first_5_tags}")
+
+    # Query OpenAI with all required arguments
+    bot_response = query_openai(asset_summary, carrier_summary, categories_summary, user_message)
 
     # Get Azure Bot token
     token = await get_azure_auth_token()
